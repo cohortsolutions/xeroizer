@@ -1,13 +1,13 @@
 Xeroizer API Library ![Project status](http://stillmaintained.com/waynerobinson/xeroizer.png) [![Build Status](https://travis-ci.org/waynerobinson/xeroizer.svg)](https://travis-ci.org/waynerobinson/xeroizer)
 ====================
 
-**Homepage**: 		[http://waynerobinson.github.com/xeroizer](http://waynerobinson.github.com/xeroizer)		
-**Git**: 					[git://github.com/waynerobinson/xeroizer.git](git://github.com/waynerobinson/xeroizer.git)		
-**Github**: 			[https://github.com/waynerobinson/xeroizer](https://github.com/waynerobinson/xeroizer)		
-**Author**: 			Wayne Robinson [http://www.wayne-robinson.com](http://www.wayne-robinson.com)		
+**Homepage**: 		[http://waynerobinson.github.com/xeroizer](http://waynerobinson.github.com/xeroizer)
+**Git**: 					[git://github.com/waynerobinson/xeroizer.git](git://github.com/waynerobinson/xeroizer.git)
+**Github**: 			[https://github.com/waynerobinson/xeroizer](https://github.com/waynerobinson/xeroizer)
+**Author**: 			Wayne Robinson [http://www.wayne-robinson.com](http://www.wayne-robinson.com)
 **Contributors**: See Contributors section below
 **Copyright**:    2007-2013
-**License**:      MIT License		
+**License**:      MIT License
 
 Introduction
 ------------
@@ -69,7 +69,7 @@ client = Xeroizer::PublicApplication.new(YOUR_OAUTH_CONSUMER_KEY, YOUR_OAUTH_CON
 request_token = client.request_token(:oauth_callback => 'http://yourapp.com/oauth/callback')
 
 # 2. Redirect the user to the URL specified by the RequestToken.
-#    
+#
 #    Note: example uses redirect_to method defined in Rails controllers.
 redirect_to request_token.authorize_url
 
@@ -174,11 +174,21 @@ client = Xeroizer::PrivateApplication.new(YOUR_OAUTH_CONSUMER_KEY, YOUR_OAUTH_CO
 contacts = client.Contact.all
 ```
 
+To provide a private key directly, set the path to nil and pass in a `private_key` option instead. For example:
+
+```ruby
+# Using environment variables (e.g. Heroku):
+client = Xeroizer::PrivateApplication.new(key, secret, nil, private_key: ENV["XERO_PRIVATE_KEY"])
+
+# Using Rails Credentials (Rails 5.2+):
+client = Xeroizer::PrivateApplication.new(key, secret, nil, private_key: Rails.application.credentials.xero_private_key)
+```
+
 ### Partner Applications
 
 Partner applications use a combination of 3-legged authorisation and private key message signing.
 
-You will need to contact Xero (network@xero.com) to get permission to create a partner application.
+Visit the [https://developer.xero.com/partner/app-partner](Becoming an app partner) page to get permission to create a partner application.
 
 After you have followed the instructions provided by Xero for partner applications and uploaded your certificate you can
 access the partner application in a similar way to public applications.
@@ -200,7 +210,7 @@ client = Xeroizer::PartnerApplication.new(
 request_token = client.request_token(:oauth_callback => 'http://yourapp.com/oauth/callback')
 
 # 2. Redirect the user to the URL specified by the RequestToken.
-#    
+#
 #    Note: example uses redirect_to method defined in Rails controllers.
 redirect_to request_token.authorize_url
 
@@ -224,8 +234,8 @@ access_secret = client.access_token.secret
 
 Two other interesting attributes of the PartnerApplication client are:
 
-> **`#expires_at`**:								Time this AccessToken will expire (usually 30 minutes into the future).		
-> **`#authorization_expires_at`**:	How long this organisation has authorised you to access their data (usually 10 years into the future).		
+> **`#expires_at`**:								Time this AccessToken will expire (usually 30 minutes into the future).
+> **`#authorization_expires_at`**:	How long this organisation has authorised you to access their data (usually 10 years into the future).
 
 #### AccessToken Renewal
 
@@ -474,6 +484,13 @@ contact.save
 Have a look at the models in `lib/xeroizer/models/` to see the valid attributes, associations and
 minimum validation requirements for each of the record types.
 
+Some Xero endpoints, such as Payment, will only accept specific attributes for updates. Because the library does not have this knowledge encoded (and doesn't do dirty tracking of attributes), it's necessary to construct new objects instead of using the ones retrieved from Xero:
+
+```ruby
+delete_payment = gateway.Payment.build(id: payment.id, status: 'DELETED')
+delete_payment.save
+```
+
 ### Bulk Creates & Updates
 
 Xero has a hard daily limit on the number of API requests you can make (currently 5,000 requests
@@ -579,6 +596,8 @@ Reports are accessed like the following example:
 ```ruby
 trial_balance = xero.TrialBalance.get(:date => DateTime.new(2011,3,21))
 
+profit_and_loss = xero.ProfitAndLoss.get(fromDate: Date.new(2019,4,1), toDate: Date.new(2019,5,1))
+
 # Array containing report headings.
 trial_balance.header.cells.map { | cell | cell.value }
 
@@ -646,7 +665,7 @@ If required, the library can handle these exceptions internally by sleeping 1 se
 You can set this option when initializing an application:
 
 ```ruby
-# Sleep for 2 seconds every time the rate limit is exceeded.
+# Sleep for 1 second and retry up to 3 times when Xero claims the nonce was used.
 client = Xeroizer::PublicApplication.new(YOUR_OAUTH_CONSUMER_KEY,
                                          YOUR_OAUTH_CONSUMER_SECRET,
                                          :nonce_used_max_attempts => 3)
